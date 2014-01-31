@@ -79,7 +79,27 @@ def diffusionMap(data, epsilon=0.2):
     
     return z,eigenvector_sort,ev #Returns scores, eigenvectors, and eigenvalues
 
+def IsoMap(data, k_nearest_neighbors=5):
+    #data is (Nxk), N objects, k features
 
+    #Step 1. Determine the nearest neighbors for each data point
+
+    #Step 2. Fill graph G with distances for nearest neighbors, with 0's elsewhere
+
+    #Step 3. Traverse G to find "distance" from data point A to data point B following only nearest neighbors
+
+    #Step 4. Eigendecompose "distance" matrix determined in step 3
+    l,v = linalg.eig(distance)
+    l_sort = sorted(l,reverse=True)
+    ev = array(l_sort)**2/sum(array(l_sort)**2)
+    x = v.transpose()
+    y=x[l.argsort()]
+    eigenvector_sort = y[::-1]
+
+    #Step 5. Project original data onto newly defined basis
+    z = dot(eigenvector_sort.T,data)
+
+    return z, eigenvector_sort,ev #Returns scores, eigenvectors, and eigenvalues
             
             
             
