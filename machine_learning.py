@@ -88,9 +88,8 @@ def diffusionMap(data, epsilon=0.2,delta=1e-10,n_eig=100):
     lambda_x = inner(ones((N,1)),eigenvalues)
 
     #Psi = Eigenvectors/eigenvector[1]
-    #print shape(eigenvector_sort[0])
     weight = inner(eigenvector_sort[:,0].reshape(N,1),ones((N,1)))
-    psi = eigenvector_sort #/weight #[:,n_eig]
+    psi = eigenvector_sort/weight
     
     #Step 3. Project original data onto newly defined basis
     X = psi[:,1:n_eig+1]*lambda_x[:,0:n_eig]
