@@ -6,8 +6,15 @@ My own personal Machine Learning codes.
 Includes PCA, Diffusion Mapping, Isomapping
 """
 
+__author__ = "Michael Peth, Peter Freeman"
+__copyright__ = "Copyright 2014"
+__credits__ = ["Michael Peth", "Peter Freeman"]
+__license__ = "GPL"
+__version__ = "1.0.0"
+__maintainer__ = "Michael Peth"
+__email__ = "mikepeth@pha.jhu.edu"
+
 from numpy import *
-#from pylab import *
 import os
 import pyfits
 from pygoods import *
@@ -15,6 +22,21 @@ import scipy
 from scipy.sparse.linalg import eigsh
 
 def whiten(data):
+    '''
+    Compute a Principal Component analysis p for a data set
+
+    Parameters
+    ----------
+    data: matrix
+    Input data (Nxk): N objects by k features, whitened (i.e. average subtracted and stddev scaled)
+
+
+    Returns
+    -------
+    whiten_data: matrix
+    Input data that has been average subtracted and stddev scaled (Nxk)
+    '''
+    
     #Take data (Nxk) N objects by k features, subtract mean, and scale by variance
     mu = mean(data,axis=0)
     wvar = std(data,axis=0)
@@ -25,38 +47,88 @@ def whiten(data):
     return whiten_data
     
 
-def PCA(whiten_data,covariance=False):
-    #whiten data is (Nxk): number of objects x number of features
-    #Covariance = false uses SVD method to calculate eigenvalues, eigenvectors
-    if covariance == False:
-        u, s, v = linalg.svd(whiten_data)
-        eigenvalues = s**2/sum(s**2)
+def PCA(self, data):
+     '''
+    Compute a Principal Component analysis p for a data set
 
-        pc = zeros(shape(whiten_data))
-        for i in range(len(whiten_data[0])):
-                       for j in range(len(whiten_data[0])):
-                                      pc[:,i] = pc[:,i] + v[i][j]*whiten_data[:,j]
-                                      
-        return pc,v,eigenvalues
+    Parameters
+    ----------
+    whiten_data: matrix
+    Input data (Nxk): N objects by k features
+
+
+    Returns
+    -------
+    Structure with the following keys:
     
-    if covariance == True:
-    #Use covariance method, take eigenvalues of C matrix
-        C = cov(whiten_data) #Covariance matrix
-        l,v = linalg.eig(C)
-        l_sort = sorted(l,reverse=True)
-        ev = array(l_sort)**2/sum(array(l_sort)**2)
-        x = v.transpose()
-        y=x[l.argsort()]
-        eigenvector_sort = y[::-1]
-        z = dot(eigenvector_sort.T,whiten_data)
-        return z,eigenvector_sort,ev
+    pc: matrix
+    Principal Component Coordinates
 
-def diffusionMap(data, epsilon=0.2,delta=1e-10,n_eig=100):
-    #Lee & Freeman 2012
-    #data: (Nxk): N objects by k features, not whitened
-    #epsilon: value determined to optimize function, default is 0.2
-    #delta: minimum value used in e^(-d^2/eps) matrix, creates sparse matrix
-    #n_eig: Number of eigenvectors to keep, default is 100 
+    values: array
+    Eigenvalue solutions to SVD
+
+    vectors: matrix
+    Eigenvector solutions to SVD
+    '''
+
+    #Whiten data (i.e. average subtracted and stddev scaled)
+    whiten_data = whiten(data)
+
+    #Calculate eigenvalues/eigenvectors from SVD
+    u, s, v = linalg.svd(whiten_data)
+
+    #Force eigenvalues between 0 and 1
+    eigenvalues = s**2/sum(s**2)
+
+    #Change data to PC basis
+    pc = zeros(shape(whiten_data))
+    for i in range(len(whiten_data[0])):
+        for j in range(len(whiten_data[0])):
+            pc[:,i] = pc[:,i] + v[i][j]*whiten_data[:,j]
+
+    self.pc = pc
+    self.values = eigenvalues
+    self.vectors = v
+
+    return
+                                      
+
+
+def diffusionMap(self, data, epsilon=0.2,delta=1e-10,n_eig=100):
+    '''
+    Compute a diffusion Map for a data set, based heavily on
+    Lee & Freeman 2012
+
+    Parameters
+    ----------
+    data: matrix
+    Input data (Nxk): N objects by k features, not whitened
+
+    epsilon: float
+    value determined to optimize function, default is 0.2
+
+    delta: float
+    delta: minimum value used in e^(-d^2/eps) matrix, creates sparse matrix
+
+    n_eig: int
+    Number of eigenvectors to keep, default is 100
+
+    Returns
+    -------
+    Structure with the following keys:
+    
+    X: matrix
+    Diffusion Map Coordinates = weighted eigenvectors * eigenvalues
+
+    eigenvals: array
+    Eigenvalue solutions to Diffusion problem
+
+    psi: matrix
+    Weighted eigenvectors
+
+    weights: array
+    First eigenvector
+    '''
     distance = zeros((len(data),len(data))) #NxN distance function
 
     #Step 1. Build matrix (NxN) of distances using e^(-d_ij^2/epsilon), d_ij = Euclidean distance
@@ -94,7 +166,11 @@ def diffusionMap(data, epsilon=0.2,delta=1e-10,n_eig=100):
     #Step 3. Project original data onto newly defined basis
     X = psi[:,1:n_eig+1]*lambda_x[:,0:n_eig]
 
-    X_dict = {'X':X,'eigenvals':l_sort,'psi':psi,'weight':weight}
-    return X_dict #Returns scores and eigenvalues
+    self.X = X
+    self.eigenvals = l_sort
+    self.psi = psi
+    self.weight = weight
+
+    return
             
             
