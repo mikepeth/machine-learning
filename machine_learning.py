@@ -63,7 +63,7 @@ class PCA:
         -------
         Structure with the following keys:
 
-        pc: matrix
+        X: matrix
         Principal Component Coordinates
 
         values: array
@@ -86,19 +86,20 @@ class PCA:
             for j in range(len(whiten_data[0])):
                 pc[:,i] = pc[:,i] + v[i][j]*whiten_data[:,j]
 
-        self.pc = pc
+        self.X = pc
         self.values = eigenvalues
         self.vectors = v
 
         return
 
-    def pcV(self,whiten_data,v):
+class pcV:
+    def __init__(self,data,v):
         '''
         Compute a Principal Component analysis p for a data set
 
         Parameters
         ----------
-        whiten_data: matrix
+        data: matrix
         Input data (Nxk): N objects by k features
 
         v: matrix
@@ -108,7 +109,7 @@ class PCA:
         -------
         Structure with the following keys:
 
-        pc: matrix
+        X: matrix
         Principal Component Coordinates
         '''
         
@@ -118,7 +119,7 @@ class PCA:
             for j in range(len(whiten_data[0])):
                 pc[:,i] = pc[:,i] + v[i][j]*whiten_data[:,j]
 
-        self.pc = pc
+        self.X = pc
         return
 
 
