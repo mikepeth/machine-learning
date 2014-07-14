@@ -44,6 +44,10 @@ def create_complete_data_morphcat(catalog,zmin=0,zmax=10,band='J'):
 		mass_string = 'FAST_bc03_lmass'
 	if 'log_Stellar_Mass' in catalog.names:
 		mass_string = 'log_Stellar_mass'
+	if 'fast_bc03_lmass' in catalog.names:
+		mass_string = 'fast_bc03_lmass'
+
+	#print band
 	
 	good_data = where((isfinite(catalog['SExMAG_%s' % (band)])) &  (catalog['SN_%s' % (band)] >= 4.0) & \
 			  (catalog[photz_string] > zmin) &  (catalog[photz_string] < zmax)  &  (catalog['FLAG_%s' % (band)] == 0) & (catalog['C_%s' % (band)] > 0) & \
@@ -61,9 +65,20 @@ def create_complete_data_morphcat(catalog,zmin=0,zmax=10,band='J'):
 	#print "z+SN ", len(where((catalog[photz_string] > zmin) &  (catalog[photz_string] < zmax) & (catalog['SN_%s' % (band)] >= 4.))[0])
 	#print "z+C ", len(where((catalog[photz_string] > zmin) &  (catalog[photz_string] < zmax) & (catalog['C_%s' % (band)] > 0))[0])
 	#print "z+FLAG ", len(where((catalog[photz_string] > zmin) &  (catalog[photz_string] < zmax) & (catalog['FLAG_%s' % (band)] == 0.0))[0])
-	#print "z+Mass ", len(where((catalog[photz_string] > zmin) &  (catalog[photz_string] < zmax) & (catalog[mass_string] > 10.0))[0])
+	## print "z+Mass ", len(where((catalog[photz_string] > zmin) &  (catalog[photz_string] < zmax) & (catalog[mass_string] > 10.0))[0])
+	## print "z+Mass+C ", len(where((catalog[photz_string] > zmin) &  (catalog[photz_string] < zmax) & (catalog[mass_string] > 10.0) & (catalog['C_%s' % (band)] > 0))[0])
+	## print "z+Mass+S/N ", len(where((catalog[photz_string] > zmin) &  (catalog[photz_string] < zmax) & (catalog[mass_string] > 10.0) & \
+	##(catalog['SN_%s' % (band)] >= 4.))[0])
+	## print "z+Mass+FLAG ", len(where((catalog[photz_string] > zmin) &  (catalog[photz_string] < zmax) & (catalog[mass_string] > 10.0) & \
+	## 				(catalog['FLAG_%s' % (band)] == 0))[0])
+	## print "z+Mass+C+S/N ", len(where((catalog[photz_string] > zmin) &  (catalog[photz_string] < zmax) & (catalog[mass_string] > 10.0) & \
+	## 				 (catalog['C_%s' % (band)] > 0) & (catalog['SN_%s' % (band)] >= 4.))[0])
+	## print "z+Mass+C+FLAG ", len(where((catalog[photz_string] > zmin) &  (catalog[photz_string] < zmax) & (catalog[mass_string] > 10.0) & \
+	## 			     (catalog['C_%s' % (band)] > 0) & (catalog['FLAG_%s' % (band)] == 0))[0])
+	## print "z+Mass+S/N+FLAG ", len(where((catalog[photz_string] > zmin) &  (catalog[photz_string] < zmax) & (catalog[mass_string] > 10.0) & \
+	## 			       (catalog['SN_%s' % (band)] >= 4.) & (catalog['FLAG_%s' % (band)] == 0))[0])
 
-	#print "All cuts ", len(good_data)
+        ##print "All cuts ", len(good_data)
 	return good_data
 
 def select_morph_matrix(morph_cat,morph_cat_index,fields,use_flux=False):
@@ -293,7 +308,7 @@ def redshift_sample(catalog, band='J',zmin=0,zmax=10.0):
     catalog_sample = catalog[good_data]
     return catalog_sample
 
-def data_multicat2(catalog1,catalog2=None, catalog3=None,band='J',zmin=0,zmax=10.0):
+def data_multicat_full(catalog1,catalog2=None, catalog3=None,band='J',zmin=0,zmax=10.0):
     #First catalog
     #Remove bad data (S/N < 4, Missing values, etc.)
     good_data = create_complete_data_morphcat(catalog1,zmin,zmax,band=band)
@@ -315,7 +330,7 @@ def data_multicat2(catalog1,catalog2=None, catalog3=None,band='J',zmin=0,zmax=10
             good_data_catalog3 = create_complete_data_morphcat(catalog3,zmin,zmax,band=band)
             catalog3_sample = catalog3[good_data_catalog3] #selects only galaxies in sample, i.e. M* > 10^10
 	    #Combine all 3 catalogs
-	    morph_class =morphcat(catalog1[good_data],catalog2=catalog2_sample,catalog3=catalog3_sample)
+	    morph_class =morphcat(catalog1_sample,catalog2=catalog2_sample,catalog3=catalog3_sample)
             #Combine only 2 catalogs
         else:
             
@@ -324,50 +339,177 @@ def data_multicat2(catalog1,catalog2=None, catalog3=None,band='J',zmin=0,zmax=10
     else:
         #morph = data_combine(A,catalog1_sample)
 	morph_class = morphcat(catalog1_sample)
-
+    
     return morph_class
 
 def morphcat(catalog1, catalog2=None,catalog3=None):
 
-		new_dict = {}
-		catalog1_names = catalog1.names
-		catalog2_names = catalog2.names
-		catalog3_names = catalog3.names
-
-		#Get list of all field names from all catalogs
+	new_dict = {}
+	catalog1 = capitalize_keys(catalog1)
+	catalog1_names = catalog1.keys()
+	if catalog2 != None:
+		catalog2 = capitalize_keys(catalog2)
+		catalog2_names = catalog2.keys()
 		
-		if catalog2 != None:
-			if catalog3 != None:
-				all_parameters = [catalog1.names+catalog2.names+catalog3.names]
-			else:
-				all_parameters = [catalog1.names+catalog2.names]
+	if catalog3 != None:
+		catalog3 = capitalize_keys(catalog3)
+		catalog3_names = catalog3.keys()
+
+	#Get list of all field names from all catalogs
+
+	if catalog2 != None:
+		if catalog3 != None:
+			all_parameters = [catalog1.keys()+catalog2.keys()+catalog3.keys()]
 		else:
-			all_parameters = [catalog1.names]
+			all_parameters = [catalog1.keys()+catalog2.keys()]
+	else:
+		all_parameters = [catalog1.keys()]
 
-		all_parameters_unique = unique(array(all_parameters)) #Remove duplicate field names from list
+	all_parameters_unique = unique(array(all_parameters)) #Remove duplicate field names from list
 
-		#Create and update new dictionary that is the concantenation of all constituent catalogs
-		for param in all_parameters_unique:
-			if param in catalog1_names:
-				#print catalog1.names[where(catalog1.names == param)[0]]
-				#print param, " exists"
-				new_dict[param] = catalog1[param].tolist()
-			else:
-				#print param, " doesn't exist"
-				new_param_default = -99.0*ones(len(catalog1[catalog1.names[0]]))
-				new_dict[param] = new_param_default.tolist() #Create list of -99.0 for when parameter is missing
-			if catalog2 != None:
-				for ngal2 in range(len(catalog2[catalog2.names[0]])):
-					if param in catalog2_names:
-						new_dict[param].append(catalog2[param][ngal2])
+
+	#Create and update new dictionary that is the concantenation of all constituent catalogs
+	for param in all_parameters_unique:
+		if param in catalog1_names:
+			#print catalog1.names[where(catalog1.names == param)[0]]
+			#print param, " exists"
+			new_dict[param] = catalog1[param].tolist()
+		else:
+			#print param, " doesn't exist"
+			new_param_default = -99.0*ones(len(catalog1[catalog1.keys()[0]]))
+			new_dict[param] = new_param_default.tolist() #Create list of -99.0 for when parameter is missing
+		if catalog2 != None:
+			for ngal2 in range(len(catalog2[catalog2.keys()[0]])):
+				if param in catalog2_names:
+					new_dict[param].append(catalog2[param][ngal2])
+				else:
+					new_dict[param].append(-99)
+
+			if catalog3 != None:
+				for ngal3 in range(len(catalog3[catalog3.keys()[0]])):
+					if param in catalog3_names:
+						new_dict[param].append(catalog3[param][ngal3])
 					else:
 						new_dict[param].append(-99)
-					
-				if catalog3 != None:
-					for ngal3 in range(len(catalog3[catalog3.names[0]])):
-						if param in catalog3_names:
-							new_dict[param].append(catalog3[param][ngal3])
-						else:
-							new_dict[param].append(-99)
-			new_dict[param] = array(new_dict[param])
-		return new_dict
+		new_dict[param] = array(new_dict[param])
+	return new_dict
+
+def fixConcentration(catalog,band='J',zmin=1.36,zmax=1.97):
+	new_catalog = catalog
+	badc = where((catalog['Photo_z'] > zmin) &  (catalog['Photo_z'] < zmax) & (catalog['log_stellar_mass'] > 10.0) & (catalog['C_%s' % (band)] < 0))[0]
+	r80 = catalog['R80_%s' % (band)][badc]*0.06 #Converts pixels to arcseconds
+	new_concentration = 5*log10(r80/0.08) #0.08 Is size of PSF, lower limit on C
+	new_catalog['C_%s' % (band)][badc] = new_concentration
+	#print len(badc)
+	return new_catalog[badc]
+
+def capitalize_keys(d):
+	#Convert fits rec to dictionary, while also capitalizing keys/names
+	result = {}
+	for key in d.names:
+		upper_key = key.upper()
+		result[upper_key] = d[key]
+	return result
+
+def full_z_sample(catalog,zmin=0,zmax=10,band='J'):
+	
+	if 'zbest_candels' in catalog.names:
+		photz_string = 'zbest_candels'
+	if 'Photo_z' in catalog.names:
+		photz_string = 'Photo_z'
+	
+	if 'FAST_bc03_lmass' in catalog.names:
+		mass_string = 'FAST_bc03_lmass'
+	if 'log_Stellar_Mass' in catalog.names:
+		mass_string = 'log_Stellar_mass'
+	
+	good_data = where((isfinite(catalog['SExMAG_%s' % (band)])) &  (catalog['SN_%s' % (band)] >= 4.0) & \
+			  (catalog['FLAG_%s' % (band)] == 0) & (catalog['C_%s' % (band)] > 0) & \
+			  (catalog[mass_string] > 10.0))[0]
+	
+	return good_data
+
+def full_mass_sample(catalog,zmin=0,zmax=10,band='J'):
+	
+	if 'zbest_candels' in catalog.names:
+		photz_string = 'zbest_candels'
+	if 'Photo_z' in catalog.names:
+		photz_string = 'Photo_z'
+	
+	if 'FAST_bc03_lmass' in catalog.names:
+		mass_string = 'FAST_bc03_lmass'
+	if 'log_Stellar_Mass' in catalog.names:
+		mass_string = 'log_Stellar_mass'
+	
+	good_data = where((isfinite(catalog['SExMAG_%s' % (band)])) &  (catalog['SN_%s' % (band)] >= 4.0) & \
+			  (catalog[photz_string] > zmin)  & (catalog[photz_string] < zmax)  &  (catalog['FLAG_%s' % (band)] == 0) & (catalog['C_%s' % (band)] > 0))[0]
+	
+	return good_data
+
+def zsample_multicat(catalog1,catalog2=None, catalog3=None,band='J',zmin=0,zmax=10.0):
+    #First catalog
+    #Remove bad data (S/N < 4, Missing values, etc.)
+    good_data = full_z_sample(catalog1,zmin,zmax,band=band)
+    catalog1_sample = catalog1[good_data] #selects only galaxies in sample, i.e. M* > 10^10
+
+    #Combine good data into a single data matrix
+    #A,A_names = select_morph_matrix2(catalog1_sample,data_fields,use_flux=False)
+
+    #Second catalog (if exists)
+    #Remove bad data (S/N < 4, Missing values, etc.)
+    if catalog2 != None:
+        good_data_catalog2 = full_z_sample(catalog2,zmin,zmax,band=band)
+        catalog2_sample = catalog2[good_data_catalog2] #selects only galaxies in sample, i.e. M* > 10^10
+        #Combine good data into a single data matrix
+        #catalog2,names_catalog2 = select_morph_matrix2(catalog2_sample,data_fields,use_flux=False)
+
+        #Catalog2 needs to exist if you want to read catalog3
+        if catalog3 != None:
+            good_data_catalog3 = full_z_sample(catalog3,zmin,zmax,band=band)
+            catalog3_sample = catalog3[good_data_catalog3] #selects only galaxies in sample, i.e. M* > 10^10
+	    #Combine all 3 catalogs
+	    morph_class =morphcat(catalog1_sample,catalog2=catalog2_sample,catalog3=catalog3_sample)
+            #Combine only 2 catalogs
+        else:
+            
+	    morph_class = morphcat(catalog1_sample,catalog2=catalog2_sample)
+    #For when there's only 1 catalog
+    else:
+        #morph = data_combine(A,catalog1_sample)
+	morph_class = morphcat(catalog1_sample)
+    
+    return morph_class
+
+def mass_sample_multicat(catalog1,catalog2=None, catalog3=None,band='J',zmin=0,zmax=10.0):
+    #First catalog
+    #Remove bad data (S/N < 4, Missing values, etc.)
+    good_data = full_mass_sample(catalog1,zmin,zmax,band=band)
+    catalog1_sample = catalog1[good_data] #selects only galaxies in sample, i.e. M* > 10^10
+
+    #Combine good data into a single data matrix
+    #A,A_names = select_morph_matrix2(catalog1_sample,data_fields,use_flux=False)
+
+    #Second catalog (if exists)
+    #Remove bad data (S/N < 4, Missing values, etc.)
+    if catalog2 != None:
+        good_data_catalog2 = full_mass_sample(catalog2,zmin,zmax,band=band)
+        catalog2_sample = catalog2[good_data_catalog2] #selects only galaxies in sample, i.e. M* > 10^10
+        #Combine good data into a single data matrix
+        #catalog2,names_catalog2 = select_morph_matrix2(catalog2_sample,data_fields,use_flux=False)
+
+        #Catalog2 needs to exist if you want to read catalog3
+        if catalog3 != None:
+            good_data_catalog3 = full_mass_sample(catalog3,zmin,zmax,band=band)
+            catalog3_sample = catalog3[good_data_catalog3] #selects only galaxies in sample, i.e. M* > 10^10
+	    #Combine all 3 catalogs
+	    morph_class =morphcat(catalog1_sample,catalog2=catalog2_sample,catalog3=catalog3_sample)
+            #Combine only 2 catalogs
+        else:
+            
+	    morph_class = morphcat(catalog1_sample,catalog2=catalog2_sample)
+    #For when there's only 1 catalog
+    else:
+        #morph = data_combine(A,catalog1_sample)
+	morph_class = morphcat(catalog1_sample)
+    
+    return morph_class
